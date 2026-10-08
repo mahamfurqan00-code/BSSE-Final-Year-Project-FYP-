@@ -16,7 +16,12 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-only-key-change-me")
 # Database: SQLite by default (zero setup). To use MySQL (e.g. WAMP + MySQL 5.6 as in
 # the project document) set DATABASE_URL, for example:
 #   mysql+pymysql://root:@localhost/fraud_detection
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:///fraud_detection.db")
+database_url = os.environ.get("DATABASE_URL", "sqlite:///fraud_detection.db")
+if database_url.startswith("postgres://"):
+    database_url = "postgresql+psycopg://" + database_url[len("postgres://"):]
+elif database_url.startswith("postgresql://"):
+    database_url = "postgresql+psycopg://" + database_url[len("postgresql://"):]
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -284,7 +289,7 @@ def inject_unread_feedback():
 
 @app.route('/')
 def welcome():
-    return render_template('welcome.html')
+    return render_template('index.html')
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -522,6 +527,14 @@ def create_admin():
         print(f"Admin account created for {email}.")
 
 
+@app.cli.command("init-db")
+def initialize_database():
+    """Create or upgrade the database and seed the sample applications."""
+    with app.app_context():
+        init_db()
+    print("Database initialized.")
+
+
 # --- Database setup / upgrade ---
 
 def ensure_schema():
@@ -531,7 +544,7 @@ def ensure_schema():
     wanted = {
         'application': {'rating': 'FLOAT', 'verdict': 'VARCHAR(20)'},
         'review': {'sentiment_score': 'FLOAT'},
-        'feedback': {'is_read': 'BOOLEAN DEFAULT 0'},
+        'feedback': {'is_read': 'BOOLEAN DEFAULT FALSE'},
     }
     with db.engine.begin() as conn:
         for table, columns in wanted.items():

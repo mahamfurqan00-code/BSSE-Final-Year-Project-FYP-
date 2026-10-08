@@ -2,3 +2,4 @@ flask
 flask_sqlalchemy
 textblob
 nltk
+psycopg[binary]
