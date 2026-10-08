@@ -289,7 +289,7 @@ def inject_unread_feedback():
 
 @app.route('/')
 def welcome():
-    return render_template('index.html')
+    return render_template('welcome.html')
 
 
 @app.route('/register', methods=['GET', 'POST'])
